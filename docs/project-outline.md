@@ -102,11 +102,22 @@ different kinds of models. At least one CNN and one RNN-based neural networks ar
 for this task.
 
 We also plan to design and test more models. Hopefully, a working model that has an accuracy > 50% could be
-found. We may also provide this tool to exprimentalist for realtime fast data analysis in their labs.
+found. We may also provide this tool to experimentalist for realtime fast data analysis in their labs.
 
 ## Ethics
+
+Given the current repetition rate of the state-of-art experimental techniques, 120 Hz for X-ray scattering
+and 50000 Hz for keV-UED, it's very hard for experimentalist to analyze these scattering patterns on the fly
+by using traditional methods during experiments. With the help of deep learning, it makes possible to do
+real-time fast data-analysis for experimentalists. The obtained information would guide the experiment and
+offer valuable insights.
+
+Since this project is designed as a tool for experimentalists instead of taking over all jobs of a human, we
+plan to quantify the success by how much more efficiency it helps improve in the labs. And depending on how
+experimentalists are relying on the tool, it might also cause mistakes.
 
 ## Division of labor
 
 - Lingyu: Generate data, preprocessing, investigate suitable Neural Networks (NN), training
 - Dawei: Investigate suitable NNs, training
+
