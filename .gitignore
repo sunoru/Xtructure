@@ -3,5 +3,6 @@
 __pycache__/
 build/
 .vscode/
-/data/
+/data/*.mat
+checkpoints/
 /venv/

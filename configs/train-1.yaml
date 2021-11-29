@@ -1,0 +1,22 @@
+# Example setup scripts for training.
+
+name: train-1
+description: Train and test with just NMM (DFT ion)
+task: iam2structure
+model: GNN
+
+learning-rate: 0.001
+batch-size: 128
+epochs: 10
+logging-period: 400
+checkpoints: ../checkpoints
+
+# TODO: deduce vocab-size while reading data.
+vocab-size: 20
+embedding-size: 256
+
+data:
+  - mat: ../data/NMM_iondft_IAM_pattern.mat
+    bonds: ../data/NMM.bonds
+    train: 0-159999
+    test: 160000-173977
