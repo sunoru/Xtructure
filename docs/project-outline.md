@@ -119,5 +119,23 @@ experimentalists are relying on the tool, it might also cause mistakes.
 ## Division of labor
 
 - Lingyu: Generate data, preprocessing, investigate suitable Neural Networks (NN), training
-- Dawei: Investigate suitable NNs, training
+- Dawei: Preprocessing,  Investigate suitable NNs, training
+
+## Challenges
+
+When we explore suitable Neural Networks for our project, we've encountered the following challenges:
+
+- Currently, we can not come up a suitable neural network which can be used as **a general molecular scattering pattern interpreter**. Be more specific, our input data is *simulated scattering pattern* + *atomic numbers of the corresponding molecule*, and the ouput is the 3D cartesian coordinates for each atom within the molecules. No matter we use GNN, RNN, Transformer or just CNN, its trained weights or embeddings are just for one specific molecular since different molecules might have different number of atoms (e.g. N-methlymorphine C5H11NO has 18 atoms while 1,2-Dithiane C4S2H8 has only 14 atoms), different connections between atoms (e.g. C-N, C-O bonds in N-methylmorphine and C-S, S-S bonds in 1,2-Dithiane), and etc. Furthermore, the input size and output size are not fixed for different molecules, because different number of atoms within different molecules,  the size of output is changing with respect to the input size. Because these constrictions, we can only build one NN for one molecules and haven't found a general molecular scattering pattern interpreter yet. 
+- The molecular structures in our structure pool are close to each other, for example, we've estimate the maximum relative percent difference between two scattering patterns is around 7% for the corresponding two molecular structures of NMM. Given the architecture of NN we've built now, i.e. use several layers of CNN as an encoder to encode the information in the scattering pattern, and the output of the CNN as the initial state for the following RNN which is used to recovering the 3D cartesian coordinates for the molecule, it seems that every time we trained the NN, it finds some local/artificial structures which sit around in the middle of the structure pool. It would give the small loss but always the same structure, kind of like the model collapse in GAN. Therefore, we have some trouble finding or tuning the architecture of NN to suitablely solve our problem. 
+
+## Insights
+
+- We've built our neural network, train and test on it. But we found the problem as mentioned in the second bullet point in the Challenges section. Therefore, we haven't had concrete results at this point. 
+- Actually, we originally expected that our model should work and give us some kind of reasonable predicted strcutures. In reality, our current model can not tell those subtle structural differences in the structure pool and have some issues in correct prediction. 
+
+## Plan
+
+- First, we would like to resolve the issues we've met in the current model, i.e. letting one molecular interpreter NN normally function. We will try to re-process our data to magnify the differences between the scattering patterns w.r.t different molecular structures, tune the architecture of the current model to strengthen the recognization ability. (*Dedicate more time into this task*)
+- Then, we will build such one molecular scattering pattern interpreter for each kind of molecule we have, and probably compare the quality of their predictions. We have one million structures for N-methylmorphine (NMM), half million structures for 1,3-cyclohexadiene (CHD), and around half million structures for 1,2-Dithiane (DT). 
+- Finally, we hope that with the help or insights from TA, we could construct a general molecular scattering pattern interpreter, which could predict different molecular structures given different kinds of scattering patterns. (*If it is possible, we'll try for it*)
 
