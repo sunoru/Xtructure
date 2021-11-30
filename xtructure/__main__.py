@@ -1,3 +1,5 @@
+import time
+
 import tensorflow as tf
 
 from xtructure.init import get_dataset, init_model, load_config
@@ -11,8 +13,8 @@ def train_one_epoch(model, dataset, bonds, config):
         dataset.shuffle(num_inputs).batch(batch_size)
     ):
         with tf.GradientTape() as tape:
-            predicted = model(input_iam, input_atomic_numbers, bonds, True)
-            loss = model.loss(predicted, output_coordinates)
+            preds = model(input_iam, input_atomic_numbers, bonds, True)
+            loss = model.loss(preds, output_coordinates)
         gradients = tape.gradient(loss, model.trainable_variables)
         model.optimizer.apply_gradients(zip(gradients, model.trainable_variables))
         loss = loss.numpy()
@@ -23,30 +25,49 @@ def train_one_epoch(model, dataset, bonds, config):
 
 
 def train(model, config):
+    print("Loading dataset...")
     bonds, dataset = get_dataset(config)
+    print("Training...")
+    start_time = time.perf_counter()
     for i in range(config['epochs']):
         print(f'Epoch {i}:')
         loss = train_one_epoch(model, dataset, bonds, config)
         print(f'Total Loss = {loss}')
     print('Training complete.')
+    seconds = int(time.perf_counter() - start_time)
+    print("Training Time:", f"{seconds // 60:d}:{seconds % 60:02d}")
     model.save_weights(config['checkpoints'])
     print('Weights saved.')
 
 
 def test(model, config):
-    # TODO
-    pass
+    print("Loading test dataset...")
+    bonds, dataset = get_dataset(config, False)
+    print("Testing...")
+    total_loss = 0
+    batch_size = config['batch-size']
+    for i, (input_iam, input_atomic_numbers, output_coordinates) in enumerate(
+        dataset.batch(batch_size)
+    ):
+        preds = model(input_iam, input_atomic_numbers, bonds, True)
+        loss = model.loss(preds, output_coordinates)
+        total_loss += loss.numpy()
+    print(f'Test Loss = {total_loss}')
+
+    return total_loss
 
 
 def main(argv):
-    if len(argv) != 1:
-        print('Usage: xtructure config.yaml')
+    argc = len(argv)
+    if argc not in [2, 3] or argc > 2 and argv[2] != '--test':
+        print('Usage: xtructure config.yaml [--test]')
         return 1
-    config = load_config(argv[0])
-    model = init_model(config)
-    if config['has_train']:
+    config = load_config(argv[1])
+    test_only = argc > 2
+    model = init_model(config, test_only)
+    if not test_only and config['has_train']:
         train(model, config)
-    else:
+    if config['has_test']:
         test(model, config)
     return 0
 

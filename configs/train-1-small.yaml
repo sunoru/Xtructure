@@ -1,27 +1,25 @@
 # Example setup scripts for training.
 
-name: train-1
-description: Train and test with just NMM (DFT ion)
+name: train-1-small
+description: Train and test with just NMM (DFT ion) - small parameters
 task: iam2structure
 model: cnn+rnn
 
 learning-rate: 0.001
 batch-size: 128
-epochs: 10
-logging-period: 400
+epochs: 1
+logging-period: 40
 checkpoints: ../checkpoints
 
-# TODO: deduce vocab-size while reading data.
 vocab-size: 20
-embedding-size: 512
+embedding-size: 64
 
-# Arguments for the network
 network:
   kernel-size: 5
-  cnn-size: 256
-  cnn-num-layers: 2
-  rnn-size: 512
-  hidden-size: 512
+  cnn-size: 32
+  cnn-num-layers: 1
+  rnn-size: 32
+  hidden-size: 64
 
 data:
   - mat: ../data/NMM_iondft_IAM_pattern.mat

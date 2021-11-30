@@ -2,12 +2,11 @@ import os
 import re
 
 import numpy as np
-from numpy.core.numeric import indices
 from scipy.io import loadmat
 import tensorflow as tf
 import yaml
 
-from xtructure.preprocess import put_at_center
+from xtructure.utils import put_at_center
 
 
 def load_data(mat_file, bonds_file):
@@ -16,17 +15,17 @@ def load_data(mat_file, bonds_file):
     newgeoms = data['Newgeoms']
     result = {
         'IAM': data['I_IAM_patterns'],
-        'atomic_numbers': np.cast(newgeoms[:, :, 0], dtype=np.int),
-        'coordinates': put_at_center(newgeoms[:, :, 1:4]),
+        'atomic_numbers': newgeoms[:, :, 0].astype(np.int32),
+        'coordinates': put_at_center(newgeoms[:, :, 1:4].astype(np.float32)),
     }
     natoms = newgeoms.shape[1]
-    result['bonds'] = bonds = np.zeros((natoms, natoms), dtype=np.int)
+    result['bonds'] = bonds = np.zeros((natoms, natoms), dtype=np.int32)
     pair_regex = re.compile(r'\(\w+(?P<i>\d+?),\s*\w+(?P<j>\d+?)\)')
     with open(bonds_file) as fi:
         for line in fi:
             _, atom_pairs = line.split(':')
             for m in pair_regex.finditer(atom_pairs):
-                i, j = m.groups
+                i, j = m.groups()
                 i, j = int(i) - 1, int(j) - 1
                 bonds[i, j] = 1
                 bonds[j, i] = 1
@@ -53,9 +52,9 @@ def get_indices(s):
 
 def load_config(config_file):
     with open(config_file) as fi:
-        config = yaml.load(fi)
+        config = yaml.load(fi, Loader=yaml.FullLoader)
     assert config['task'] in ['iam2structure']
-    assert config['model'] in ['gnn']
+    assert config['model'] in ['cnn+rnn', 'gnn']
     assert isinstance(config['data'], list)
     set_default(config, 'name', 'unnamed')
     assert re.match(r'[a-zA-Z0-9\-_]+', config['name'])
@@ -63,19 +62,20 @@ def load_config(config_file):
     set_default(config, 'learning-rate', 0.001)
     set_default(config, 'batch-size', 128)
     set_default(config, 'epochs', 10)
-    set_default(config, 'model', 'gnn')
+    set_default(config, 'model', 'cnn+rnn')
     set_default(config, 'load-weights', False)
     set_default(config, 'checkpoints', './checkpoints')
     base_dir = os.path.dirname(config_file)
-    config['checkpoints'] = os.path.abspath(os.path.join(base_dir, config['checkpoints'], config['name']))
-    os.makedirs(config['checkpoints'], exist_ok=True)
+    checkpoints_dir = os.path.join(base_dir, config['checkpoints'])
+    config['checkpoints'] = os.path.abspath(os.path.join(checkpoints_dir, config['name']))
+    os.makedirs(checkpoints_dir, exist_ok=True)
     has_train = False
     has_test = False
     for each in config['data']:
         assert isinstance(each, dict)
         each['data'] = load_data(
             os.path.join(base_dir, each['mat']),
-            os.pard.join(base_dir, each['bonds']),
+            os.path.join(base_dir, each['bonds']),
         )
         if 'train' in each:
             has_train = True
@@ -85,21 +85,28 @@ def load_config(config_file):
             each['test'] = get_indices(each['test'])
     config['has_train'] = has_train
     config['has_test'] = has_test
+
+    assert 'vocab-size' in config
+    assert 'embedding-size' in config
+
     return config
 
 
-def init_model(config):
+def init_model(config, load=False):
     model_type = config['model']
     model = None
-    if model_type == 'gnn':
-        from .gnn import GNN
-        model = GNN(config)
-    if config['load-weights']:
-        natoms = config['data'][0]['data']['coordinates'].shape[1]
-        iam = np.zeros((1, natoms, 3))
-        atomic_numbers = np.zeros((natoms,), dtype=np.int)
-        bonds = config['data'][0]['data']['bonds']
-        model(iam, atomic_numbers, bonds)
+    if model_type == 'cnn+rnn':
+        from xtructure import cnn_rnn
+        model = cnn_rnn.Model(config)
+    elif model_type == 'gnn':
+        from xtructure import gnn
+        model = gnn.Model(config)
+    if model is not None and (load or config['load-weights']):
+        # natoms = config['data'][0]['data']['coordinates'].shape[1]
+        # iam = np.zeros((1, natoms, 3))
+        # atomic_numbers = np.zeros((natoms,), dtype=np.int)
+        # bonds = config['data'][0]['data']['bonds']
+        # model(iam, atomic_numbers, bonds)
         model.load_weights(config['checkpoints'])
     return model
 
