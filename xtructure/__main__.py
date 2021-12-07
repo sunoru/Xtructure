@@ -3,9 +3,9 @@ import time
 import tensorflow as tf
 
 from xtructure.init import get_dataset, init_model, load_config
+from xtructure.utils import rmsd_sqr
 
 def train_one_epoch(model, dataset, bonds, config):
-    total_loss = 0
     num_inputs = len(dataset)
     batch_size = config['batch-size']
     logging_period = config['logging-period']
@@ -13,15 +13,14 @@ def train_one_epoch(model, dataset, bonds, config):
         dataset.shuffle(num_inputs).batch(batch_size)
     ):
         with tf.GradientTape() as tape:
-            preds = model(input_iam, input_atomic_numbers, bonds, True)
+            preds = model(input_iam, input_atomic_numbers, bonds, training=True)
             loss = model.loss(preds, output_coordinates)
         gradients = tape.gradient(loss, model.trainable_variables)
         model.optimizer.apply_gradients(zip(gradients, model.trainable_variables))
         loss = loss.numpy()
         if i % logging_period == 0:
             print(f"Step {i:5d}: Loss = {loss}")
-        total_loss += loss
-    return total_loss
+    return loss
 
 
 def train(model, config):
@@ -32,7 +31,7 @@ def train(model, config):
     for i in range(config['epochs']):
         print(f'Epoch {i}:')
         loss = train_one_epoch(model, dataset, bonds, config)
-        print(f'Total Loss = {loss}')
+        print(f'Train Loss = {loss}')
     print('Training complete.')
     seconds = int(time.perf_counter() - start_time)
     print("Training Time:", f"{seconds // 60:d}:{seconds % 60:02d}")
@@ -51,8 +50,11 @@ def test(model, config):
     ):
         preds = model(input_iam, input_atomic_numbers, bonds, True)
         loss = model.loss(preds, output_coordinates)
-        total_loss += loss.numpy()
-    print(f'Test Loss = {total_loss}')
+        total_loss += loss.numpy() * len(output_coordinates)
+    print(f'Test Loss = {total_loss / len(dataset)}')
+    print(preds[-2:])
+    print(output_coordinates[-2:])
+    print(rmsd_sqr(preds[-2:], output_coordinates[-2:]))
 
     return total_loss
 
