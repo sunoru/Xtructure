@@ -9,12 +9,12 @@ import yaml
 from xtructure.utils import put_at_center
 
 
-def load_data(mat_file, bonds_file):
+def load_data(config, mat_file, bonds_file):
     with open(mat_file, 'rb') as fi:
         data = loadmat(fi)
     newgeoms = data['Newgeoms']
     result = {
-        'IAM': data['I_IAM_patterns'],
+        'IAM': data[config.get('data-key', 'I_IAM_patterns')],
         'atomic_numbers': newgeoms[:, :, 0].astype(np.int32),
         'coordinates': put_at_center(newgeoms[:, :, 1:4].astype(np.float32)),
     }
@@ -54,7 +54,7 @@ def load_config(config_file):
     with open(config_file) as fi:
         config = yaml.load(fi, Loader=yaml.FullLoader)
     assert config['task'] in ['iam2structure']
-    assert config['model'] in ['cnn+rnn', 'gnn']
+    assert config['model'] in ['cnn+rnn', 'transformer']
     assert isinstance(config['data'], list)
     set_default(config, 'name', 'unnamed')
     assert re.match(r'[a-zA-Z0-9\-_]+', config['name'])
@@ -63,7 +63,7 @@ def load_config(config_file):
     set_default(config, 'batch-size', 128)
     set_default(config, 'epochs', 10)
     set_default(config, 'model', 'cnn+rnn')
-    set_default(config, 'load-weights', False)
+    set_default(config, 'load-weights', -1)
     set_default(config, 'checkpoints', './checkpoints')
     base_dir = os.path.dirname(config_file)
     checkpoints_dir = os.path.join(base_dir, config['checkpoints'])
@@ -74,6 +74,7 @@ def load_config(config_file):
     for each in config['data']:
         assert isinstance(each, dict)
         each['data'] = load_data(
+            each,
             os.path.join(base_dir, each['mat']),
             os.path.join(base_dir, each['bonds']),
         )
@@ -88,6 +89,9 @@ def load_config(config_file):
 
     assert 'vocab-size' in config
     assert 'embedding-size' in config
+    max_threads = config.get('max-threads', 0)
+    tf.config.threading.set_inter_op_parallelism_threads(max_threads)
+    tf.config.threading.set_intra_op_parallelism_threads(max_threads)
 
     return config
 
@@ -101,13 +105,17 @@ def init_model(config, load=False):
     elif model_type == 'gnn':
         from xtructure import gnn
         model = gnn.Model(config)
-    if model is not None and (load or config['load-weights']):
+    elif model_type == 'transformer':
+        from xtructure import transformer
+        model = transformer.Model(config)
+    if model is not None and (load or config['load-weights'] >= 0):
         # natoms = config['data'][0]['data']['coordinates'].shape[1]
         # iam = np.zeros((1, natoms, 3))
         # atomic_numbers = np.zeros((natoms,), dtype=np.int)
         # bonds = config['data'][0]['data']['bonds']
         # model(iam, atomic_numbers, bonds)
-        model.load_weights(config['checkpoints'])
+        checkpoint_id = config['epochs'] - 1 if load else config['load-weights']
+        model.load_weights(config['checkpoints'] + f'/{checkpoint_id}').expect_partial()
     return model
 
 

@@ -1,7 +1,7 @@
 # Example setup scripts for training.
 
-name: train-2
-description: Transformer (just NMM (DFT ion))
+name: train-3
+description: Transformer (with NMM DFT-ion coherent patterns)
 task: iam2structure
 model: transformer
 
@@ -22,7 +22,8 @@ network:
   window-size: 18
 
 data:
-  - mat: ../data/NMM_iondft_IAM_pattern.mat
+  - mat: ../data/NMM_iondft_IAM_coherent_pattern.mat
+    data-key: I_IAM_coherent_patterns
     bonds: ../data/NMM.bonds
     train: 0-159999
-    test: 160000-173977
+    test: 160000-173996
