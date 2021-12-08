@@ -1,0 +1,35 @@
+# Example setup scripts for training.
+
+name: train-mlp-norm
+description: 
+task: iam2structure
+model: cnn
+
+learning-rate: 0.001
+batch-size: 128
+# epochs: 10
+epochs: 1
+logging-period: 10
+checkpoints: ../checkpoints
+
+vocab-size: 20
+embedding-size: 128
+max-threads: 14
+
+network:
+  cnns: []
+  denses:
+    - 256
+    - 256
+    - 256
+    - 256
+    - 128
+    - 64
+  num-atoms: 18
+
+data:
+  - mat: ../data/Norm_Stand_NMM_DFTion_IAM_coherent_patterns.mat
+    data-key: std_pattern
+    bonds: ../data/NMM.bonds
+    train: 0-159999
+    test: 160000-173996

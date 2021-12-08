@@ -14,8 +14,8 @@ class Model(models.Model):
         # No decoder is needed.
         network_config = config['network']
         self.window_size = network_config['window-size']
-        self.encoder_embedding = layers.Embedding(self.window_size, self.embedding_size)
-        self.decoder_embedding = layers.Embedding(self.window_size, self.embedding_size)
+        self.encoder_embedding = layers.Embedding(self.vocab_size, self.embedding_size)
+        self.decoder_embedding = layers.Embedding(self.vocab_size, self.embedding_size)
         self.encoder_positional = attention.PositionEncoding(self.window_size, self.embedding_size)
         self.decoder_positional = attention.PositionEncoding(self.window_size, self.embedding_size)
         self.num_encoders = network_config['num-encoders']

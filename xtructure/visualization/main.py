@@ -20,8 +20,8 @@ def visualize(config, args):
         preds = model(input_iam[None, :], input_atomic_numbers[None, :], bonds, True)
         loss = model.loss(preds, output_coordinates[None, :])
         print(f'Loss = {loss}')
-        write_xyz(os.path.join(output_dir, f'{i}-actual.xyz'), input_atomic_numbers.numpy(), preds[0].numpy())
-        write_xyz(os.path.join(output_dir, f'{i}-expected.xyz'), input_atomic_numbers.numpy(), output_coordinates.numpy())
+        write_xyz(os.path.join(output_dir, f'{i}-predicted.xyz'), input_atomic_numbers.numpy(), preds[0].numpy())
+        write_xyz(os.path.join(output_dir, f'{i}-real.xyz'), input_atomic_numbers.numpy(), output_coordinates.numpy())
 
     print('Done.')
     return 0

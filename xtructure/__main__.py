@@ -8,6 +8,7 @@ from xtructure.init import get_dataset, init_model, load_config
 from xtructure.utils import rmsd_sqr
 from xtructure.visualization.main import visualize
 
+
 def train_one_epoch(model, dataset, bonds, config):
     num_inputs = len(dataset)
     batch_size = config['batch-size']

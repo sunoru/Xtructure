@@ -13,3 +13,21 @@ def rmsd_sqr(preds, target):
 
 def rmsd(preds, target):
     return tf.sqrt(rmsd_sqr(preds, target))
+
+
+def rmsd_sqr_bonds(preds, coords, bonds):
+    batch_size = preds.shape[0]
+    n = len(bonds)
+    loss = tf.zeros(batch_size)
+    for i in range(n - 1):
+        for j in range(i + 1, n):
+            if bonds[i, j] > 0:
+                loss += tf.reduce_sum(
+                    tf.square(
+                        tf.square(preds[:, i] - preds[:, j]) - 
+                        tf.square(coords[:, i] - coords[:, j])
+                    ),
+                    axis=1
+                )
+    return loss
+

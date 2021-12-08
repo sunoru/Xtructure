@@ -15,7 +15,7 @@ def load_data(config, mat_file, bonds_file):
     newgeoms = data['Newgeoms']
     result = {
         'IAM': data[config.get('data-key', 'I_IAM_patterns')],
-        'atomic_numbers': newgeoms[:, :, 0].astype(np.int32),
+        'atomic_numbers': newgeoms[:, :, 0].astype(np.int32) - 1,
         'coordinates': put_at_center(newgeoms[:, :, 1:4].astype(np.float32)),
     }
     natoms = newgeoms.shape[1]
@@ -54,7 +54,7 @@ def load_config(config_file):
     with open(config_file) as fi:
         config = yaml.load(fi, Loader=yaml.FullLoader)
     assert config['task'] in ['iam2structure']
-    assert config['model'] in ['cnn+rnn', 'transformer']
+    assert config['model'] in ['cnn+rnn', 'transformer', 'cnn']
     assert isinstance(config['data'], list)
     set_default(config, 'name', 'unnamed')
     assert re.match(r'[a-zA-Z0-9\-_]+', config['name'])
@@ -62,7 +62,7 @@ def load_config(config_file):
     set_default(config, 'learning-rate', 0.001)
     set_default(config, 'batch-size', 128)
     set_default(config, 'epochs', 10)
-    set_default(config, 'model', 'cnn+rnn')
+    set_default(config, 'model', 'cnn')
     set_default(config, 'load-weights', -1)
     set_default(config, 'checkpoints', './checkpoints')
     base_dir = os.path.dirname(config_file)
@@ -102,18 +102,13 @@ def init_model(config, load=False):
     if model_type == 'cnn+rnn':
         from xtructure import cnn_rnn
         model = cnn_rnn.Model(config)
-    elif model_type == 'gnn':
-        from xtructure import gnn
-        model = gnn.Model(config)
+    elif model_type == 'cnn':
+        from xtructure import cnn
+        model = cnn.Model(config)
     elif model_type == 'transformer':
         from xtructure import transformer
         model = transformer.Model(config)
     if model is not None and (load or config['load-weights'] >= 0):
-        # natoms = config['data'][0]['data']['coordinates'].shape[1]
-        # iam = np.zeros((1, natoms, 3))
-        # atomic_numbers = np.zeros((natoms,), dtype=np.int)
-        # bonds = config['data'][0]['data']['bonds']
-        # model(iam, atomic_numbers, bonds)
         checkpoint_id = config['epochs'] - 1 if load else config['load-weights']
         model.load_weights(config['checkpoints'] + f'/{checkpoint_id}').expect_partial()
     return model

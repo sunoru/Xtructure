@@ -1,0 +1,29 @@
+# Example setup scripts for training.
+
+name: train-4-norm
+description: Transformer (norm)
+task: iam2structure
+model: transformer
+
+learning-rate: 0.001
+batch-size: 128
+# epochs: 10
+epochs: 1
+logging-period: 10
+checkpoints: ../checkpoints
+
+vocab-size: 20
+embedding-size: 128
+max-threads: 14
+
+network:
+  num-encoders: 2
+  num-decoders: 2
+  window-size: 18
+
+data:
+  - mat: ../data/Norm_Stand_NMM_DFTion_IAM_coherent_patterns.mat
+    data-key: norm_pattern
+    bonds: ../data/NMM.bonds
+    train: 0-159999
+    test: 160000-173996
