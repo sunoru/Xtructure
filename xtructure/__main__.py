@@ -9,21 +9,31 @@ from xtructure.utils import rmsd_sqr
 from xtructure.visualization.main import visualize
 
 
-def train_one_epoch(model, dataset, bonds, config):
+def train_one_epoch(model, dataset, bonds, config, pre_train=False):
     num_inputs = len(dataset)
     batch_size = config['batch-size']
     logging_period = config['logging-period']
-    for i, (input_iam, input_atomic_numbers, output_coordinates) in enumerate(
-        dataset.shuffle(num_inputs).batch(batch_size)
-    ):
+    bonds_loss = model.bonds_loss
+    if pre_train:
+        model.bonds_loss = None
+        iam, atomic_numbers, coordinates = next(iter(dataset.batch(1)))
+        training_data = tf.data.Dataset.from_tensor_slices(
+            (iam, atomic_numbers, coordinates)
+        ).repeat(20000).batch(batch_size)
+    else:
+        training_data = dataset.shuffle(num_inputs).batch(batch_size)
+         
+    for i, (input_iam, input_atomic_numbers, output_coordinates) in enumerate(training_data):
         with tf.GradientTape() as tape:
-            preds = model(input_iam, input_atomic_numbers, bonds, training=True)
+            preds = model(input_iam, input_atomic_numbers, bonds, training=not pre_train)
             loss = model.loss(preds, output_coordinates)
         gradients = tape.gradient(loss, model.trainable_variables)
         model.optimizer.apply_gradients(zip(gradients, model.trainable_variables))
         loss = loss.numpy()
         if i % logging_period == 0:
             print(f'Step {i:5d}: Loss = {loss}')
+    if pre_train:
+        model.bonds_loss = bonds_loss
     return loss
 
 
@@ -32,6 +42,10 @@ def train(model, config):
     bonds, dataset = get_dataset(config)
     print('Training...')
     start_time = time.perf_counter()
+    if config['pre-train']:
+        print('Pre-training...')
+        train_one_epoch(model, dataset, bonds, config, pre_train=True)
+        model.save_weights(config['checkpoints'] + '/pre-train')
     for i in range(config['epochs']):
         print(f'Epoch {i}:')
         loss = train_one_epoch(model, dataset, bonds, config)

@@ -1,12 +1,13 @@
 import tensorflow as tf
 from tensorflow.keras import layers, models
+from xtructure.bases import BaseModel
 
 from xtructure.utils import rmsd_sqr
 
 
-class Model(models.Model):
+class Model(BaseModel):
     def __init__(self, config):
-        super().__init__()
+        super().__init__(config)
         self.optimizer = tf.keras.optimizers.Adam(config['learning-rate'])
         self.vocab_size = config['vocab-size']
         self.embedding_size = config['embedding-size']
@@ -30,7 +31,8 @@ class Model(models.Model):
 
         self.final_dense = layers.Dense(3)
 
-    def call(self, input_iam, input_atomic_numbers, _bonds, training=False):
+    def call(self, input_iam, input_atomic_numbers, bonds, training=False):
+        self.set_bonds(bonds)
         # batch_size x iam_length x 1
         x = input_iam[:, :, None]
         for cnn in self.cnns:
@@ -47,6 +49,3 @@ class Model(models.Model):
         # batch_size x num_atoms x 3
         preds = self.final_dense(rnn_output)
         return preds
-
-    def loss(self, preds, coords):
-        return tf.reduce_mean(rmsd_sqr(preds, coords))

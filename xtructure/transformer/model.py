@@ -1,13 +1,14 @@
 import tensorflow as tf
 from tensorflow.keras import layers, models
+from xtructure.bases import BaseModel
 
 from xtructure.transformer import attention
 from xtructure.utils import rmsd_sqr
 
 
-class Model(models.Model):
+class Model(BaseModel):
     def __init__(self, config):
-        super().__init__()
+        super().__init__(config)
         self.optimizer = tf.keras.optimizers.Adam(config['learning-rate'])
         self.vocab_size = config['vocab-size']
         self.embedding_size = config['embedding-size']
@@ -30,7 +31,8 @@ class Model(models.Model):
         ]
         self.final_dense = layers.Dense(3)
 
-    def call(self, input_iam, input_atomic_numbers, _bonds, training=False):
+    def call(self, input_iam, input_atomic_numbers, bonds, training=False):
+        self.set_bonds(bonds)
         encoder_embedded = self.encoder_embedding(input_atomic_numbers)
         encoder_output = self.encoder_positional(encoder_embedded, input_iam, training=training)
         for encoder in self.encoders:
@@ -42,7 +44,3 @@ class Model(models.Model):
             decoder_output = decoder(decoder_output, context=encoder_output, training=training)
         preds = self.final_dense(decoder_output)
         return preds
-
-    def loss(self, preds, coords):
-        return tf.reduce_mean(rmsd_sqr(preds, coords))
-

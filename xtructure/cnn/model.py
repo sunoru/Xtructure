@@ -1,13 +1,13 @@
 import tensorflow as tf
 from tensorflow.keras import layers, models
+from xtructure.bases import BaseModel
 
-from xtructure.utils import rmsd_sqr, rmsd_sqr_bonds
+from xtructure.utils import rmsd_sqr, rmsd_sqr_bonds, rmsd_exp_bonds
 
 
-class Model(models.Model):
+class Model(BaseModel):
     def __init__(self, config):
-        super().__init__()
-        self.optimizer = tf.keras.optimizers.Adam(config['learning-rate'])
+        super().__init__(config)
         network_config = config['network']
 
         self.cnns = [
@@ -26,8 +26,7 @@ class Model(models.Model):
         self.bonds = None
 
     def call(self, input_iam, _input_atomic_numbers, bonds, training=False):
-        if self.bonds is None:
-            self.bonds = tf.constant(bonds)
+        self.set_bonds(bonds)
         # batch_size x iam_length x 1
         x = input_iam[:, :, None]
         for cnn in self.cnns:
@@ -41,9 +40,4 @@ class Model(models.Model):
         preds = tf.reshape(preds, [-1, self.num_atoms, 3])
         return preds - tf.reduce_mean(preds, axis=1)[:, None, :]
 
-    def loss(self, preds, coords):
-        return tf.reduce_mean(
-            rmsd_sqr(preds, coords) +
-            rmsd_sqr_bonds(preds, coords, self.bonds)
-        )
         # return tf.reduce_mean(rmsd_sqr(preds, coords))

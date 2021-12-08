@@ -63,7 +63,6 @@ def load_config(config_file):
     set_default(config, 'batch-size', 128)
     set_default(config, 'epochs', 10)
     set_default(config, 'model', 'cnn')
-    set_default(config, 'load-weights', -1)
     set_default(config, 'checkpoints', './checkpoints')
     base_dir = os.path.dirname(config_file)
     checkpoints_dir = os.path.join(base_dir, config['checkpoints'])
@@ -108,9 +107,12 @@ def init_model(config, load=False):
     elif model_type == 'transformer':
         from xtructure import transformer
         model = transformer.Model(config)
-    if model is not None and (load or config['load-weights'] >= 0):
-        checkpoint_id = config['epochs'] - 1 if load else config['load-weights']
-        model.load_weights(config['checkpoints'] + f'/{checkpoint_id}').expect_partial()
+    load_weights = config.get('load-weights', None)
+    if model is not None and (load or load_weights is not None):
+        checkpoint_id = config['epochs'] - 1 if load_weights is None else load_weights
+        path = config['checkpoints'] + f'/{checkpoint_id}'
+        print(f'Loading weights from {path}')
+        model.load_weights(path).expect_partial()
     return model
 
 
