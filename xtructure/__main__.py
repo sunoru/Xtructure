@@ -1,6 +1,9 @@
-import time
 import argparse
+import os
+import time
+import numpy as np
 
+import scipy.io
 import tensorflow as tf
 from tensorflow.python.keras.engine import training
 
@@ -23,6 +26,7 @@ def train_one_epoch(model, dataset, bonds, config, pre_train=False):
     else:
         training_data = dataset.shuffle(num_inputs).batch(batch_size)
          
+    losses = []
     for i, (input_iam, input_atomic_numbers, output_coordinates) in enumerate(training_data):
         with tf.GradientTape() as tape:
             preds = model(input_iam, input_atomic_numbers, bonds, training=not pre_train)
@@ -30,11 +34,12 @@ def train_one_epoch(model, dataset, bonds, config, pre_train=False):
         gradients = tape.gradient(loss, model.trainable_variables)
         model.optimizer.apply_gradients(zip(gradients, model.trainable_variables))
         loss = loss.numpy()
+        losses.append(loss)
         if i % logging_period == 0:
             print(f'Step {i:5d}: Loss = {loss}')
     if pre_train:
         model.bonds_loss = bonds_loss
-    return loss
+    return losses
 
 
 def train(model, config):
@@ -46,15 +51,18 @@ def train(model, config):
         print('Pre-training...')
         train_one_epoch(model, dataset, bonds, config, pre_train=True)
         model.save_weights(config['checkpoints'] + '/pre-train')
+    train_losses = []
     for i in range(config['epochs']):
         print(f'Epoch {i}:')
-        loss = train_one_epoch(model, dataset, bonds, config)
-        print(f'Train Loss = {loss}')
+        losses = train_one_epoch(model, dataset, bonds, config)
+        print(f'Train Loss = {np.mean(losses)}')
+        train_losses.extend(losses)
         model.save_weights(config['checkpoints'] + f'/{i}')
         print('Weights saved.')
     print('Training complete.')
     seconds = int(time.perf_counter() - start_time)
     print('Training Time:', f'{seconds // 60:d}:{seconds % 60:02d}')
+    return np.array(train_losses)
 
 
 def test(model, config):
@@ -69,27 +77,46 @@ def test(model, config):
         preds = model(input_iam, input_atomic_numbers, bonds, training=False)
         loss = model.loss(preds, output_coordinates)
         total_loss += loss.numpy() * len(output_coordinates)
-    print(f'Test Loss = {total_loss / len(dataset)}')
+    loss = total_loss / len(dataset)
+    print(f'Test Loss = {loss}')
 
-    return total_loss
+    return loss
+
+
+def report(model, config, args, train_losses, test_loss):
+    output_dir = config['output-dir']
+    args.visualize_dir = output_dir
+    if not os.path.exists(output_dir):
+        os.makedirs(output_dir)
+    with open(os.path.join(output_dir, 'losses.mat'), 'wb') as f:
+        scipy.io.savemat(f, {'train_losses': train_losses, 'test_loss': test_loss})
+    visualize(config, args, [0, -1])
 
 
 def main(argv):
     parser = argparse.ArgumentParser(description='Xtructure')
-    parser.add_argument('action', choices=['run', 'train', 'test', 'visualize'])
+    parser.add_argument('action', choices=['run', 'train', 'test', 'visualize', 'report'])
     parser.add_argument('config', type=str, help='config file')
     parser.add_argument('--visualize-dir', type=str, help='visualization output directory', default='./visualization')
+    parser.add_argument('--report-test', action='store_true', help='report test')
     args = parser.parse_args(argv[1:])
     config = load_config(args.config)
     if args.action == 'visualize':
         return visualize(config, args)
     train_only = args.action == 'train'
-    test_only = args.action == 'test'
+    report_test = args.report_test
+    test_only = args.action == 'test' or report_test
     model = init_model(config, test_only)
-    if not test_only and config['has_train']:
-        train(model, config)
+    train_losses = None
+    if not test_only and not args.report_only and config['has_train']:
+        train_losses = train(model, config)
+    t = model.bonds_loss
+    if report_test:
+        model.bonds_loss = None
     if not train_only and config['has_test']:
-        test(model, config)
+        test_loss = test(model, config)
+    if args.action == 'report':
+        report(model, config, args, train_losses, test_loss)
     return 0
 
 

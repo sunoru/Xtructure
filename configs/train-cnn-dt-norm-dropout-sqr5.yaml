@@ -1,0 +1,41 @@
+# Example setup scripts for training.
+
+name: train-cnn-dt-norm-dropout-exp
+description: CNN (norm) DT
+task: iam2structure
+model: cnn
+
+learning-rate: 0.001
+batch-size: 128
+# epochs: 10
+epochs: 2
+logging-period: 10
+checkpoints: ../checkpoints
+
+vocab-size: 20
+embedding-size: 128
+max-threads: 14
+bonds-loss: sqr@5
+pre-train: yes
+# load-weights: pre-train
+
+network:
+  cnns:
+    - [32, 5]
+    - 0.7  # for dropout
+    - [32, 3]
+    - 0.5
+    - [32, 3]
+    - 0.4
+  denses:
+    - 256
+    - 128
+    - 64
+  num-atoms: 14
+
+data:
+  - mat: ../data/DT_IAM_coherent_pattern.mat
+    data-key: I_IAM_coherent_patterns
+    bonds: ../data/DT.bonds
+    train: 0-159999
+    test: 160000-173996

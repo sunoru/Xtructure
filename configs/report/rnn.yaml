@@ -1,0 +1,32 @@
+name: report-rnn
+description: CNN+RNN with NMM std data
+task: iam2structure
+model: cnn+rnn
+
+learning-rate: 0.001
+batch-size: 128
+epochs: 2
+logging-period: 40
+checkpoints: ../../checkpoints
+output-dir: ../../output
+
+vocab-size: 20
+embedding-size: 128
+max-threads: 14
+bonds-loss: sqr
+pre-train: yes
+
+network:
+  kernel-size: 5
+  cnn-size: 128
+  cnn-num-layers: 2
+  rnn-size: 128
+  hidden-size: 128
+
+data:
+  - mat: ../../data/Norm_Stand_NMM_DFTion_IAM_coherent_patterns.mat
+    data-key: std_pattern
+    bonds: ../../data/NMM.bonds
+    train: 0-159999
+    test: 160000-173996
+

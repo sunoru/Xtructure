@@ -3,7 +3,7 @@ from xtructure.init import get_dataset, get_indices, init_model
 from xtructure.visualization.utils import write_xyz
 
 
-def visualize(config, args):
+def visualize(config, args, indices=None):
     model = init_model(config, True)
     output_dir = os.path.join(args.visualize_dir, config['name'])
     if not os.path.exists(output_dir):
@@ -13,7 +13,8 @@ def visualize(config, args):
     bonds, dataset = get_dataset(config, False)
     dataset = list(dataset)
     n = len(dataset)
-    indices = get_indices(input(f'Input indices to visualize (0-{n-1}): '))
+    if indices is None:
+        indices = get_indices(input(f'Input indices to visualize (0-{n-1}): '))
     for i in indices:
         print(f'Predicting structure for index {i}... ', end='')
         input_iam, input_atomic_numbers, output_coordinates = dataset[i]

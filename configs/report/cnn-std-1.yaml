@@ -1,0 +1,40 @@
+# Example setup scripts for training.
+
+name: report-cnn-std-1
+description: CNN (std) NMM DFTion
+task: iam2structure
+model: cnn
+
+learning-rate: 0.001
+batch-size: 128
+epochs: 2
+logging-period: 10
+checkpoints: ../../checkpoints
+output-dir: ../../output
+
+vocab-size: 20
+embedding-size: 128
+max-threads: 14
+bonds-loss: sqr
+pre-train: yes
+
+network:
+  cnns:
+    - [32, 5]
+    - 0.7  # for dropout
+    - [32, 3]
+    - 0.5
+    - [32, 3]
+    - 0.4
+  denses:
+    - 256
+    - 128
+    - 64
+  num-atoms: 18
+
+data:
+  - mat: ../../data/Norm_Stand_NMM_DFTion_IAM_coherent_patterns.mat
+    data-key: std_pattern
+    bonds: ../../data/NMM.bonds
+    train: 0-159999
+    test: 160000-173996

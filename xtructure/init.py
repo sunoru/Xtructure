@@ -67,6 +67,9 @@ def load_config(config_file):
     base_dir = os.path.dirname(config_file)
     checkpoints_dir = os.path.join(base_dir, config['checkpoints'])
     config['checkpoints'] = os.path.abspath(os.path.join(checkpoints_dir, config['name']))
+    if 'output-dir' in config:
+        output_dir = os.path.join(base_dir, config['output-dir'])
+        config['output-dir'] = os.path.abspath(os.path.join(output_dir, config['name']))
     os.makedirs(checkpoints_dir, exist_ok=True)
     has_train = False
     has_test = False
